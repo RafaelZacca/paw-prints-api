@@ -48,11 +48,9 @@ describe('UsersService', () => {
         image: 'test.png',
       };
 
-      // findUnique returns null => user not found
-      prisma.user.findUnique.mockResolvedValueOnce(null);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
 
-      // create returns created user
-      prisma.user.create.mockResolvedValueOnce({ ...dto, id: 1 });
+      (prisma.user.create as jest.Mock).mockResolvedValueOnce({ ...dto, id: 1 });
 
       const result = await service.create(dto);
 
@@ -77,7 +75,7 @@ describe('UsersService', () => {
         image: 'existing.png',
       };
 
-      prisma.user.findUnique.mockResolvedValueOnce(existingUser);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(existingUser);
 
       const result = await service.create({
         name: existingUser.name,
@@ -96,7 +94,7 @@ describe('UsersService', () => {
     it('should return a user by id', async () => {
       const user = { id: 1, name: 'Test User', email: 'test@example.com', sub: '123', image: 'test.png' };
 
-      prisma.user.findUnique.mockResolvedValueOnce(user);
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(user);
 
       const result = await service.findOne(1);
 
@@ -116,7 +114,7 @@ describe('UsersService', () => {
         image: 'test.png',
       };
 
-      prisma.user.update.mockResolvedValueOnce(updatedUser);
+      (prisma.user.update as jest.Mock).mockResolvedValueOnce(updatedUser);
 
       const result = await service.update(1, updateDto);
 

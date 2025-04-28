@@ -10,7 +10,7 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   getProfile(@Request() req: any) {
-    return this.usersService.findOne(req.userId as number);
+    return this.usersService.findOne(req.user.userId as number);
   }
 
   @Patch(':id')

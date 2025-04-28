@@ -2,8 +2,9 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { JwtStrategy } from './jwt.strategy';
-import { UsersService } from 'src/users/users.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { UsersModule } from '../users/users.module';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -11,8 +12,9 @@ import { UsersService } from 'src/users/users.service';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '30d' },
     }),
+    UsersModule,
   ],
-  providers: [AuthService, JwtStrategy, UsersService],
+  providers: [AuthService, JwtStrategy, GoogleStrategy],
   controllers: [AuthController],
 })
 export class AuthModule {}

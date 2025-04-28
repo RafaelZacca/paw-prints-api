@@ -17,7 +17,6 @@ describe('UsersController', () => {
             user: {
               findMany: jest.fn(),
               findUnique: jest.fn(),
-              // add here any Prisma methods your UsersService uses
             },
           },
         },

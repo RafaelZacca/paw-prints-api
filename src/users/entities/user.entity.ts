@@ -2,5 +2,5 @@ export class User {
   id: number;
   name: string;
   email: string;
-  picture: string | undefined;
+  image: string | null | undefined;
 }

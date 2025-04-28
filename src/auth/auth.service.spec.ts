@@ -2,145 +2,99 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { OAuth2Client, LoginTicket } from 'google-auth-library';
-
-process.env.GOOGLE_CLIENT_ID = 'mock-google-client-id';
-
-// Mock google-auth-library's OAuth2Client
-jest.mock('google-auth-library', () => {
-  return {
-    OAuth2Client: jest.fn().mockImplementation(() => ({
-      verifyIdToken: jest.fn(),
-    })),
-  };
-});
 
 describe('AuthService', () => {
-  let authService: AuthService;
+  let service: AuthService;
   let jwtService: JwtService;
   let usersService: UsersService;
-  let oauthClient: jest.Mocked<OAuth2Client>;
+
+  const mockJwtService = {
+    sign: jest.fn(),
+  };
+
+  const mockUsersService = {
+    create: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthService,
-        {
-          provide: JwtService,
-          useValue: {
-            sign: jest.fn().mockReturnValue('mocked-jwt-token'),
-          },
-        },
-        {
-          provide: UsersService,
-          useValue: {
-            create: jest.fn(),
-          },
-        },
-      ],
+      providers: [AuthService, { provide: JwtService, useValue: mockJwtService }, { provide: UsersService, useValue: mockUsersService }],
     }).compile();
 
-    authService = module.get<AuthService>(AuthService);
+    service = module.get<AuthService>(AuthService);
     jwtService = module.get<JwtService>(JwtService);
     usersService = module.get<UsersService>(UsersService);
 
-    // Capture the internally created OAuth2Client instance
-    oauthClient = (authService as any).client;
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(authService).toBeDefined();
+  it('should create user if needed and return signed JWT', async () => {
+    const googleUser = {
+      email: 'test@example.com',
+      sub: 'google12345',
+      name: 'Test User',
+      picture: 'http://example.com/picture.jpg',
+    };
+
+    const mockCreatedUser = {
+      id: 1,
+      email: googleUser.email,
+      name: googleUser.name,
+      image: googleUser.picture,
+    };
+
+    mockUsersService.create.mockResolvedValue(mockCreatedUser);
+    mockJwtService.sign.mockReturnValue('mocked-jwt-token');
+
+    const result = await service.googleLogin(googleUser);
+
+    expect(usersService.create).toHaveBeenCalledWith({
+      email: googleUser.email,
+      sub: googleUser.sub,
+      name: googleUser.name,
+      image: googleUser.picture,
+    });
+
+    expect(jwtService.sign).toHaveBeenCalledWith({
+      userId: mockCreatedUser.id,
+      email: mockCreatedUser.email,
+    });
+
+    expect(result).toEqual({ access_token: 'mocked-jwt-token' });
   });
 
-  describe('validateOAuthLogin', () => {
-    it('should throw an error if payload is missing email or sub', async () => {
-      (oauthClient.verifyIdToken as jest.Mock).mockResolvedValueOnce({
-        getPayload: () => ({ email: null, sub: null }),
-      } as unknown as LoginTicket);
+  it('should generate username from email if name is missing', async () => {
+    const googleUserWithoutName = {
+      email: 'someone@example.com',
+      sub: 'google67890',
+      name: undefined,
+      picture: 'http://example.com/pic.jpg',
+    };
 
-      await expect(authService.validateOAuthLogin('fake-id-token')).rejects.toThrow('Missing email or sub in payload');
+    const mockCreatedUser = {
+      id: 2,
+      email: googleUserWithoutName.email,
+      name: 'someone',
+      image: googleUserWithoutName.picture,
+    };
+
+    mockUsersService.create.mockResolvedValue(mockCreatedUser);
+    mockJwtService.sign.mockReturnValue('mocked-jwt-token-2');
+
+    const result = await service.googleLogin(googleUserWithoutName);
+
+    expect(usersService.create).toHaveBeenCalledWith({
+      email: googleUserWithoutName.email,
+      sub: googleUserWithoutName.sub,
+      name: 'someone',
+      image: googleUserWithoutName.picture,
     });
 
-    it('should create user, sign token and return it', async () => {
-      const payload = {
-        email: 'test@example.com',
-        sub: '123456',
-        name: 'Test User',
-        picture: 'test.png',
-      };
-
-      const mockUser = {
-        id: 1,
-        email: payload.email,
-        sub: payload.sub,
-        name: payload.name,
-        image: payload.picture,
-      };
-
-      (oauthClient.verifyIdToken as jest.Mock).mockResolvedValueOnce({
-        getPayload: () => payload,
-      } as unknown as LoginTicket);
-
-      (usersService.create as jest.Mock).mockResolvedValueOnce(mockUser);
-
-      const result = await authService.validateOAuthLogin('fake-id-token');
-
-      expect(oauthClient.verifyIdToken).toHaveBeenCalledWith({
-        idToken: 'fake-id-token',
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-
-      expect(usersService.create).toHaveBeenCalledWith({
-        email: payload.email,
-        sub: payload.sub,
-        name: payload.name,
-        image: payload.picture,
-      });
-
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        userId: mockUser.id,
-        email: mockUser.email,
-      });
-
-      expect(result).toEqual({ access_token: 'mocked-jwt-token' });
+    expect(jwtService.sign).toHaveBeenCalledWith({
+      userId: mockCreatedUser.id,
+      email: mockCreatedUser.email,
     });
 
-    it('should fallback to email username if name is missing', async () => {
-      const payload = {
-        email: 'no-name@example.com',
-        sub: '654321',
-        name: undefined,
-        picture: 'no-name.png',
-      };
-
-      const mockUser = {
-        id: 2,
-        email: payload.email,
-        sub: payload.sub,
-        name: 'no-name', // <- important
-        image: payload.picture,
-      };
-
-      (oauthClient.verifyIdToken as jest.Mock).mockResolvedValueOnce({
-        getPayload: () => payload,
-      } as unknown as LoginTicket);
-
-      (usersService.create as jest.Mock).mockResolvedValueOnce(mockUser);
-
-      const result = await authService.validateOAuthLogin('fake-id-token');
-
-      expect(usersService.create).toHaveBeenCalledWith({
-        email: payload.email,
-        sub: payload.sub,
-        name: 'no-name', // fallback to email prefix
-        image: payload.picture,
-      });
-
-      expect(result).toEqual({ access_token: 'mocked-jwt-token' });
-    });
+    expect(result).toEqual({ access_token: 'mocked-jwt-token-2' });
   });
 });
