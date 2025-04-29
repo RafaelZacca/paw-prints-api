@@ -52,6 +52,7 @@ GOOGLE_CLIENT_SECRET="your_google_client_secret"
 API_URL="your_api_url"
 WEB_REDIRECT_URL="your_web_redirect_url"
 MOBILE_REDIRECT_URL="your_mobile_redirect_url"
+PLATFORM="mobile" //or web
 ```
 
 ### 4. Run Prisma Migrations

@@ -8,8 +8,8 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleAuth() {
-    // Passport will handle redirection
+  googleAuth() {
+    // Passport will handle redirection automatically
   }
 
   @Get('google/callback')
@@ -17,10 +17,11 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res) {
     const { access_token } = await this.authService.googleLogin(req.user);
 
-    const platform = req.query.platform;
+    const platform = process.env.PLATFORM || 'web'; // Default to 'web' if not set
 
     if (platform === 'mobile') {
       const mobileRedirectUrl = `${process.env.MOBILE_REDIRECT_URL}://callback?token=${access_token}`;
+
       return res.redirect(mobileRedirectUrl);
     } else {
       const webRedirectUrl = `${process.env.WEB_REDIRECT_URL}/auth/callback?token=${access_token}`;

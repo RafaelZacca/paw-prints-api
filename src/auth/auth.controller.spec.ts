@@ -12,17 +12,11 @@ describe('AuthController', () => {
 
   const mockRequest = {
     user: { email: 'test@example.com', providerId: '12345' },
-    query: {},
   };
 
   const mockResponse = {
     redirect: jest.fn(),
   };
-
-  beforeAll(() => {
-    process.env.MOBILE_REDIRECT_URL = 'pawprints';
-    process.env.WEB_REDIRECT_URL = 'http://localhost:4200';
-  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -46,44 +40,38 @@ describe('AuthController', () => {
   });
 
   it('should redirect to mobile deep link if platform is mobile', async () => {
+    process.env.PLATFORM = 'mobile';
+    process.env.MOBILE_REDIRECT_URL = 'pawprints';
+
     mockAuthService.googleLogin.mockResolvedValue({ access_token: 'test-token' });
 
-    const mobileRequest = {
-      ...mockRequest,
-      query: { platform: 'mobile' },
-    };
+    await controller.googleAuthRedirect(mockRequest as any, mockResponse as any);
 
-    await controller.googleAuthRedirect(mobileRequest as any, mockResponse as any);
-
-    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(mobileRequest.user);
+    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(mockRequest.user);
     expect(mockResponse.redirect).toHaveBeenCalledWith('pawprints://callback?token=test-token');
   });
 
   it('should redirect to web callback page if platform is web', async () => {
+    process.env.PLATFORM = 'web';
+    process.env.WEB_REDIRECT_URL = 'http://localhost:4200';
+
     mockAuthService.googleLogin.mockResolvedValue({ access_token: 'test-token' });
 
-    const webRequest = {
-      ...mockRequest,
-      query: { platform: 'web' },
-    };
+    await controller.googleAuthRedirect(mockRequest as any, mockResponse as any);
 
-    await controller.googleAuthRedirect(webRequest as any, mockResponse as any);
-
-    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(webRequest.user);
+    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(mockRequest.user);
     expect(mockResponse.redirect).toHaveBeenCalledWith('http://localhost:4200/auth/callback?token=test-token');
   });
 
-  it('should default to web callback if no platform is specified', async () => {
+  it('should default to web callback page if platform is undefined', async () => {
+    delete process.env.PLATFORM; // simulate missing env
+    process.env.WEB_REDIRECT_URL = 'http://localhost:4200';
+
     mockAuthService.googleLogin.mockResolvedValue({ access_token: 'test-token' });
 
-    const defaultRequest = {
-      ...mockRequest,
-      query: {},
-    };
+    await controller.googleAuthRedirect(mockRequest as any, mockResponse as any);
 
-    await controller.googleAuthRedirect(defaultRequest as any, mockResponse as any);
-
-    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(defaultRequest.user);
+    expect(mockAuthService.googleLogin).toHaveBeenCalledWith(mockRequest.user);
     expect(mockResponse.redirect).toHaveBeenCalledWith('http://localhost:4200/auth/callback?token=test-token');
   });
 });
