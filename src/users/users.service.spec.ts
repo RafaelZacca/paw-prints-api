@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -63,7 +62,7 @@ describe('UsersService', () => {
           image: dto.image,
         },
       });
-      expect(result).toEqual({ ...dto, id: 1 });
+      expect(result).toEqual({ ...dto, id: 1, petQuantity: 0 });
     });
 
     it('should return existing user if found', async () => {
@@ -73,6 +72,7 @@ describe('UsersService', () => {
         email: 'existing@example.com',
         sub: '654321',
         image: 'existing.png',
+        petQuantity: 0,
       };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(existingUser);
@@ -92,38 +92,14 @@ describe('UsersService', () => {
 
   describe('findOne', () => {
     it('should return a user by id', async () => {
-      const user = { id: 1, name: 'Test User', email: 'test@example.com', sub: '123', image: 'test.png' };
+      const user = { id: 1, name: 'Test User', email: 'test@example.com', sub: '123', image: 'test.png', petQuantity: 0 };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(user);
 
       const result = await service.findOne(1);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({ include: { pets: true }, where: { id: 1 } });
       expect(result).toEqual(user);
-    });
-  });
-
-  describe('update', () => {
-    it('should update and return the user', async () => {
-      const updateDto: UpdateUserDto = { name: 'Updated Name' };
-      const updatedUser = {
-        id: 1,
-        name: 'Updated Name',
-        email: 'test@example.com',
-        sub: '123',
-        image: 'test.png',
-      };
-
-      (prisma.user.update as jest.Mock).mockResolvedValueOnce(updatedUser);
-
-      const result = await service.update(1, updateDto);
-
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: updateDto,
-      });
-
-      expect(result).toEqual(updatedUser);
     });
   });
 });

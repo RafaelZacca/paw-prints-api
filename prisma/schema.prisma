@@ -13,11 +13,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PetTypes {
+  DOG
+  CAT
+  BIRD
+  REPTILE
+  FISH
+  RODENT
+  HORSE
+  COW
+  SHEEP
+  GOAT
+  PIG
+}
+
+enum MedicalRecordTypes {
+  VACCINE
+  CHECKUP
+  SURGERY
+}
+
+enum PetGender {
+  MALE
+  FEMALE
+}
+
 model User {
   id    Int    @id @default(autoincrement())
   email String @unique
-  sub   String @unique // Google's sub ID
+  sub   String @unique
   name  String 
   image String?
   createdAt DateTime @default(now())
+
+  pets Pet[]
 }
+
+model Pet {
+  id             Int             @id @default(autoincrement())
+  userId         Int
+  name           String
+  type           PetTypes
+  breed          String
+  birthDate      DateTime
+  gender         PetGender
+  location       String
+  description    String
+  medicalRecords MedicalRecord[]
+  images         PetImage[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model MedicalRecord {
+  id          Int      @id @default(autoincrement())
+  petId       Int
+  title       String
+  type        MedicalRecordTypes
+  description String
+  imageBase64    String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  pet Pet @relation(fields: [petId], references: [id])
+}
+
+model PetImage {
+  id         Int      @id @default(autoincrement())
+  petId      Int
+  imageBase64   String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  pet Pet @relation(fields: [petId], references: [id])
+}
+

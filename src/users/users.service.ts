@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { User } from './entities/user.entity';
 
@@ -27,20 +26,17 @@ export class UsersService {
         },
       });
     }
-    return user;
+    return { ...user, petQuantity: 0 };
   }
 
   async findOne(id: number): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        pets: true,
+      },
     });
-    return user;
-  }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    const where = { id };
-    const user = await this.prisma.user.update({ where, data: updateUserDto });
-
-    return user;
+    return user ? { ...user, petQuantity: user.pets?.length || 0 } : null;
   }
 }

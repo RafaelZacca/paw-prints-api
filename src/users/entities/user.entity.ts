@@ -3,4 +3,6 @@ export class User {
   name: string;
   email: string;
   image: string | null | undefined;
+  createdAt: Date;
+  petQuantity: number;
 }
